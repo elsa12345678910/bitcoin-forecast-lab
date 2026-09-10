@@ -44,6 +44,16 @@ with st.sidebar:
             "zero_return": "Zero-return baseline",
         }[value],
     )
+    benchmark_name = st.selectbox(
+        "Comparison model",
+        options=["ridge", "random_forest", "zero_return"],
+        index=2,
+        format_func=lambda value: {
+            "ridge": "Ridge regression",
+            "random_forest": "Random forest",
+            "zero_return": "Zero-return baseline",
+        }[value],
+    )
     initial_train_size = st.number_input(
         "Initial training days", min_value=30, max_value=1000, value=120, step=10
     )
@@ -89,6 +99,35 @@ chart_data = predictions.set_index("timestamp")[["actual", "predicted"]].rename(
     columns={"actual": "Actual return", "predicted": "Predicted return"}
 )
 st.line_chart(chart_data.tail(100))
+
+st.subheader("Model comparison")
+st.caption("This compares your selected model with a benchmark model on the same dates and actual returns. It is a benchmark, not another person's app prediction feed.")
+if benchmark_name == model_name:
+    st.info("Choose a different comparison model to draw the second graph.")
+else:
+    benchmark_backtest = run_cached_backtest(
+        benchmark_name, int(initial_train_size), int(step_size)
+    )
+    benchmark_predictions = pd.DataFrame(benchmark_backtest["predictions"])
+    benchmark_predictions["timestamp"] = pd.to_datetime(benchmark_predictions["timestamp"])
+    comparison_predictions = predictions[["timestamp", "actual", "predicted"]].merge(
+        benchmark_predictions[["timestamp", "predicted"]],
+        on="timestamp",
+        suffixes=("_selected", "_benchmark"),
+    )
+    comparison_chart = comparison_predictions.set_index("timestamp")[[
+        "actual",
+        "predicted_selected",
+        "predicted_benchmark",
+    ]].rename(columns={
+        "actual": "Actual return",
+        "predicted_selected": "Selected model",
+        "predicted_benchmark": "Benchmark model",
+    })
+    st.line_chart(comparison_chart.tail(100))
+    comparison_metrics = st.columns(2)
+    comparison_metrics[0].metric("Selected model MAE", f"{backtest['mae']:.2%}")
+    comparison_metrics[1].metric("Benchmark model MAE", f"{benchmark_backtest['mae']:.2%}")
 
 left, right = st.columns([1.6, 1])
 with left:
