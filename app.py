@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from app.backtesting.walk_forward import run_backtest
+from app.data.compare_sources import compare_bitcoin_sources
 from app.data.yfinance_source import fetch_bitcoin_data
 from app.features.build import build_features
 from app.forecasting.models import create_model
@@ -137,3 +138,21 @@ with st.expander("Bitcoin instruments"):
             columns=["Instrument", "Description"],
         )
     )
+
+with st.expander("Compare independent data sources"):
+    st.write("This compares Yahoo Finance BTC-USD with Coinbase BTC-USD over their shared five-year window. Close agreement does not guarantee either source is correct, but large gaps or missing dates are useful warning signs.")
+    if st.button("Run source comparison"):
+        with st.spinner("Fetching the comparison dataset..."):
+            try:
+                comparison, summary = compare_bitcoin_sources()
+                source_metrics = st.columns(4)
+                source_metrics[0].metric("Overlapping days", f"{summary['overlapping_days']:,}")
+                source_metrics[1].metric("Return correlation", f"{summary['daily_return_correlation']:.4f}")
+                source_metrics[2].metric("Mean price difference", f"{summary['mean_absolute_price_difference_pct']:.3f}%")
+                source_metrics[3].metric("Maximum difference", f"{summary['max_absolute_price_difference_pct']:.2f}%")
+                st.caption(f"Shared range: {summary['start']} to {summary['end']} · Yahoo rows: {summary['yahoo_rows']:,} · Coinbase rows: {summary['coinbase_rows']:,}")
+                source_chart = comparison.set_index("date")[["close_yahoo", "close_coinbase"]].rename(columns={"close_yahoo": "Yahoo Finance", "close_coinbase": "Coinbase"})
+                st.line_chart(source_chart)
+                st.dataframe(comparison[["date", "close_yahoo", "close_coinbase", "price_difference_pct"]].tail(10).iloc[::-1], hide_index=True, use_container_width=True)
+            except Exception as error:
+                st.error(f"Unable to compare sources: {error}")
