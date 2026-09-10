@@ -1,0 +1,11 @@
+{
+  "asset": "BTC/USD",
+  "frequency": "daily",
+  "horizon_days": 1,
+  "feature_groups": ["returns", "volatility", "volume"],
+  "model": "ridge",
+  "backtest": {
+    "initial_train_size": 120,
+    "step_size": 7
+  }
+}
