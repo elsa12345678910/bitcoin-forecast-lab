@@ -100,6 +100,19 @@ chart_data = predictions.set_index("timestamp")[["actual", "predicted"]].rename(
 )
 st.line_chart(chart_data.tail(100))
 
+st.subheader("Predicted price vs Yahoo Finance")
+st.caption("Yahoo Finance provides the observed BTC-USD close. The model price is calculated from the same day's Yahoo close and the model's predicted next-day return.")
+price_comparison = predictions[["timestamp", "actual", "predicted"]].merge(
+    features[["timestamp", "close"]], on="timestamp", how="inner"
+)
+price_comparison["Yahoo Finance actual price"] = price_comparison["close"] * (1 + price_comparison["actual"])
+price_comparison["Model predicted price"] = price_comparison["close"] * (1 + price_comparison["predicted"])
+price_chart = price_comparison.set_index("timestamp")[[
+    "Yahoo Finance actual price",
+    "Model predicted price",
+]]
+st.line_chart(price_chart.tail(100))
+
 st.subheader("Model comparison")
 st.caption("This compares your selected model with a benchmark model on the same dates and actual returns. It is a benchmark, not another person's app prediction feed.")
 if benchmark_name == model_name:
