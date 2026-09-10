@@ -1,3 +1,7 @@
-"""Compatibility entry point for the canonical app.py Streamlit application."""
+"""Compatibility entry point for the canonical root-level Streamlit app."""
 
-from app import *  # noqa: F401,F403
+from pathlib import Path
+import runpy
+
+
+runpy.run_path(Path(__file__).with_name("app.py"), run_name="__main__")
